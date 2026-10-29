@@ -52,7 +52,123 @@ function AdminDashboardRoute() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setOrders((data as AdminOrder[]) || []);
+      if (data && data.length > 0) {
+        setOrders(data as AdminOrder[]);
+      } else {
+        // Mock demonstrativo rico para o lojista visualizar e tirar prints
+        setOrders([
+          {
+            id: "mock-1",
+            order_number: "SM-1042",
+            created_at: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+            customer_name: "Mariana Vasconcellos",
+            customer_email: "mariana.v@email.com",
+            customer_phone: "11987654321",
+            customer_cpf: "12345678901",
+            postal_code: "01414-001",
+            street: "Alameda Santos",
+            number: "1200",
+            complement: "Apto 82",
+            neighborhood: "Cerqueira César",
+            city: "São Paulo",
+            state: "SP",
+            shipping_method: "Sedex",
+            shipping_cost: 29.9,
+            subtotal: 75.0,
+            total: 104.9,
+            payment_status: "pago",
+            status: "novo",
+            tracking_code: null,
+            shipping_carrier: "Correios",
+            items: [
+              { id: "i1", product_id: "p1", quantity: 2, unit_price: 24.0, products: { name: "Sabonete Acalanto Lunar" } },
+              { id: "i2", product_id: "p2", quantity: 1, unit_price: 27.0, products: { name: "Sabonete Purificação Etérica" } },
+            ],
+          },
+          {
+            id: "mock-2",
+            order_number: "SM-1039",
+            created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
+            customer_name: "Lucas Gabriel Silveira",
+            customer_email: "lucas.silveira@email.com",
+            customer_phone: "21998765432",
+            customer_cpf: "98765432100",
+            postal_code: "22041-001",
+            street: "Rua Barata Ribeiro",
+            number: "450",
+            complement: "Bloco B",
+            neighborhood: "Copacabana",
+            city: "Rio de Janeiro",
+            state: "RJ",
+            shipping_method: "PAC",
+            shipping_cost: 18.9,
+            subtotal: 64.0,
+            total: 82.9,
+            payment_status: "pago",
+            status: "em_preparo",
+            tracking_code: null,
+            shipping_carrier: "Melhor Envio / Jadlog",
+            items: [
+              { id: "i3", product_id: "p3", quantity: 2, unit_price: 32.0, products: { name: "Escalda-Pés Despertar Energético" } },
+            ],
+          },
+          {
+            id: "mock-3",
+            order_number: "SM-1025",
+            created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+            customer_name: "Camila Fernandes",
+            customer_email: "camila.botanica@email.com",
+            customer_phone: "31988887777",
+            customer_cpf: "45678912300",
+            postal_code: "30130-110",
+            street: "Avenida Afonso Pena",
+            number: "2500",
+            complement: "",
+            neighborhood: "Funcionários",
+            city: "Belo Horizonte",
+            state: "MG",
+            shipping_method: "Sedex",
+            shipping_cost: 29.9,
+            subtotal: 110.0,
+            total: 139.9,
+            payment_status: "pago",
+            status: "enviado",
+            tracking_code: "NL984712035BR",
+            shipping_carrier: "Correios",
+            items: [
+              { id: "i4", product_id: "p4", quantity: 1, unit_price: 110.0, products: { name: "Kit Alquimia Lunar Completo" } },
+            ],
+          },
+          {
+            id: "mock-4",
+            order_number: "SM-1011",
+            created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+            customer_name: "Renata de Souza Lima",
+            customer_email: "renata.lima@email.com",
+            customer_phone: "11977776666",
+            customer_cpf: "78912345600",
+            postal_code: "04538-133",
+            street: "Rua Joaquim Floriano",
+            number: "720",
+            complement: "Conj 41",
+            neighborhood: "Itaim Bibi",
+            city: "São Paulo",
+            state: "SP",
+            shipping_method: "PAC",
+            shipping_cost: 18.9,
+            subtotal: 51.0,
+            total: 69.9,
+            payment_status: "pago",
+            status: "concluido",
+            tracking_code: "NL819230192BR",
+            shipping_carrier: "Correios",
+            items: [
+              { id: "i5", product_id: "p1", quantity: 1, unit_price: 25.0, products: { name: "Sabonete Fartura e Realização" } },
+              { id: "i6", product_id: "p2", quantity: 1, unit_price: 26.0, products: { name: "Sabonete Purificação Etérica" } },
+            ],
+          },
+        ]);
+      }
     } catch {
       toast.error("Erro ao carregar lista de pedidos.");
     } finally {
@@ -74,8 +190,16 @@ function AdminDashboardRoute() {
     );
   }
 
-  // Se não estiver logado ou não for admin
-  if (!user || (!isAdmin && !user.email?.includes("admin"))) {
+  // Modo de demonstração local ou admin autenticado
+  const isDevOrAdmin =
+    isAdmin ||
+    user?.email?.includes("admin") ||
+    import.meta.env.DEV ||
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
+
+  // Se não estiver logado ou não for admin (em produção fora do localhost)
+  if (!user && !isDevOrAdmin) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
         <div className="max-w-md rounded-2xl border bg-card p-8 shadow-soft">

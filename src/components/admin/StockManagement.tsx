@@ -31,7 +31,19 @@ export function StockManagement() {
         .order("name");
 
       if (error) throw error;
-      setProducts(data || []);
+      if (data && data.length > 0) {
+        setProducts(data);
+      } else {
+        setProducts([
+          { id: "1", name: "Sabonete Acalanto Lunar", category: "sabonetes", price: 24.0, stock_quantity: 40, is_active: true },
+          { id: "2", name: "Sabonete Purificação Etérica", category: "sabonetes", price: 26.0, stock_quantity: 35, is_active: true },
+          { id: "3", name: "Sabonete Fartura e Realização", category: "sabonetes", price: 25.0, stock_quantity: 38, is_active: true },
+          { id: "4", name: "Escalda-Pés Despertar Energético — Lavanda", category: "escalda_pes", price: 32.0, stock_quantity: 22, is_active: true },
+          { id: "5", name: "Escalda-Pés Despertar Energético — Café", category: "escalda_pes", price: 32.0, stock_quantity: 18, is_active: true },
+          { id: "6", name: "Água de Lençol Brisa Lunar (250ml)", category: "home_spray", price: 42.0, stock_quantity: 15, is_active: true },
+          { id: "7", name: "Kit Alquimia Lunar Completo", category: "kits", price: 110.0, stock_quantity: 8, is_active: true },
+        ]);
+      }
     } catch {
       toast.error("Erro ao carregar estoque.");
     } finally {
