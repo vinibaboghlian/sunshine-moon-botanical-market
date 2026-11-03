@@ -159,7 +159,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile,
         session,
         loading,
-        isAdmin: profile?.role === "admin" || user?.email?.includes("admin"),
+        isAdmin:
+          profile?.role === "admin" ||
+          user?.email?.includes("admin") ||
+          user?.email === "vini.baboghlian@gmail.com",
         signIn,
         signUp,
         signOut,

@@ -62,7 +62,13 @@ function LoginRoute() {
       if (tab === "login") {
         const { error } = await signIn(email, password);
         if (error) {
-          toast.error(error.message || "Erro ao entrar. Verifique seus dados.");
+          if (error.message?.includes("Email not confirmed")) {
+            toast.error("E-mail não confirmado no Supabase. Por favor confirme o usuário no painel de Auth.");
+          } else if (error.message?.includes("Invalid login credentials")) {
+            toast.error("Credenciais inválidas. Verifique seu e-mail e senha.");
+          } else {
+            toast.error(error.message || "Erro ao entrar. Verifique seus dados.");
+          }
         } else {
           toast.success("Login realizado com sucesso!");
           navigate({ to: "/minha-conta" });

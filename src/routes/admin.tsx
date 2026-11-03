@@ -194,6 +194,7 @@ function AdminDashboardRoute() {
   const isDevOrAdmin =
     isAdmin ||
     user?.email?.includes("admin") ||
+    user?.email === "vini.baboghlian@gmail.com" ||
     import.meta.env.DEV ||
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
