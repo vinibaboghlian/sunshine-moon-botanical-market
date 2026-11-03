@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Plus, Save, Upload, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Loader2, Plus, Save, Upload, Image as ImageIcon, Sparkles, Edit, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export type ProductRow = {
   id: string;
+  slug?: string;
   name: string;
   category: string;
   price: number;
@@ -39,10 +40,12 @@ export function StockManagement() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  // Modal de Novo Produto
+  // Modal de Criação / Edição de Produto Completo
   const [openModal, setOpenModal] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [newProd, setNewProd] = useState({
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [savingProduct, setSavingProduct] = useState(false);
+
+  const [formData, setFormData] = useState({
     name: "",
     category: "sabonetes",
     price: "",
@@ -96,31 +99,41 @@ export function StockManagement() {
     );
   };
 
-  const handleSaveProduct = async (product: ProductRow) => {
+  // Salvar alterações rápidas direto da tabela (Preço, Estoque, Ativo)
+  const handleQuickSave = async (product: ProductRow) => {
     setSavingId(product.id);
     try {
-      const { error } = await supabase
+      const numericPrice = Number(product.price);
+      const numericStock = Number(product.stock_quantity);
+
+      const { data, error } = await supabase
         .from("products")
         .update({
-          stock_quantity: Number(product.stock_quantity),
-          price: Number(product.price),
+          stock_quantity: numericStock,
+          price: numericPrice,
           is_active: product.is_active,
         })
-        .eq("id", product.id);
+        .eq("id", product.id)
+        .select();
 
       if (error) {
-        // Fallback local se RLS bloquear update direto anônimo
-        console.warn("Update no Supabase ignorado por RLS, mantendo local:", error.message);
+        toast.error(`Erro ao salvar no banco: ${error.message}`);
+        return;
       }
-      toast.success(`Estoque de "${product.name}" atualizado!`);
-    } catch {
+
+      if (data && data.length === 0) {
+        toast.warning(`Atenção: execute o script fix-permissions.sql no Supabase para salvar alterações.`);
+      } else {
+        toast.success(`"${product.name}" atualizado para ${formatBRL(numericPrice)}!`);
+      }
+    } catch (err: unknown) {
       toast.error("Falha ao salvar produto.");
     } finally {
       setSavingId(null);
     }
   };
 
-  // Upload de Imagem local (converte em base64 ou URL)
+  // Upload de Imagem local (converte em base64)
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -130,92 +143,155 @@ export function StockManagement() {
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setNewProd((p) => ({ ...p, image_url: reader.result as string }));
+        setFormData((p) => ({ ...p, image_url: reader.result as string }));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleCreateProduct = async (e: React.FormEvent) => {
+  // Abrir modal para novo produto
+  const handleOpenCreateModal = () => {
+    setEditingId(null);
+    setFormData({
+      name: "",
+      category: "sabonetes",
+      price: "",
+      stock_quantity: "20",
+      description: "",
+      sensory_notes: "",
+      benefits: "",
+      image_url: "",
+      weight_grams: "150",
+      package_width_cm: "10",
+      package_height_cm: "10",
+      package_depth_cm: "5",
+    });
+    setOpenModal(true);
+  };
+
+  // Abrir modal para editar produto existente (textos, aromas, benefícios, fotos)
+  const handleOpenEditModal = (p: ProductRow) => {
+    setEditingId(p.id);
+    setFormData({
+      name: p.name || "",
+      category: p.category || "sabonetes",
+      price: String(p.price || ""),
+      stock_quantity: String(p.stock_quantity ?? "0"),
+      description: p.description || "",
+      sensory_notes: p.sensory_notes || "",
+      benefits: (p.benefits || []).join("\n"),
+      image_url: p.image_url || "",
+      weight_grams: String(p.weight_grams || "150"),
+      package_width_cm: String(p.package_width_cm || "10"),
+      package_height_cm: String(p.package_height_cm || "10"),
+      package_depth_cm: String(p.package_depth_cm || "5"),
+    });
+    setOpenModal(true);
+  };
+
+  // Salvar no Modal (Criação ou Edição Completa)
+  const handleSaveModal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProd.name.trim()) {
+    if (!formData.name.trim()) {
       toast.error("Informe o nome do produto.");
       return;
     }
-    if (!newProd.price || Number(newProd.price) <= 0) {
+    if (!formData.price || Number(formData.price) <= 0) {
       toast.error("Informe um preço válido.");
       return;
     }
 
-    setCreating(true);
-    const slug = newProd.name
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)+/g, "") + "-" + Date.now().toString(36).slice(-4);
-
-    const benefitsArray = newProd.benefits
-      .split("\n")
-      .map((b) => b.trim())
-      .filter(Boolean);
-
-    const productPayload = {
-      name: newProd.name.trim(),
-      slug,
-      category: newProd.category,
-      price: Number(newProd.price),
-      stock_quantity: Number(newProd.stock_quantity || 0),
-      description: newProd.description.trim() || null,
-      sensory_notes: newProd.sensory_notes.trim() || null,
-      benefits: benefitsArray.length > 0 ? benefitsArray : ["Feito à mão com ingredientes naturais"],
-      image_url: newProd.image_url || null,
-      is_active: true,
-      weight_grams: Number(newProd.weight_grams) || 150,
-      package_width_cm: Number(newProd.package_width_cm) || 10,
-      package_height_cm: Number(newProd.package_height_cm) || 10,
-      package_depth_cm: Number(newProd.package_depth_cm) || 5,
-    };
-
+    setSavingProduct(true);
     try {
-      const { data, error } = await supabase
-        .from("products")
-        .insert(productPayload)
-        .select();
+      const benefitsArray = formData.benefits
+        .split("\n")
+        .map((b) => b.trim())
+        .filter(Boolean);
 
-      if (error) {
-        console.warn("Aviso RLS ao inserir no Supabase remoto:", error.message);
-        // Fallback gracioso: adiciona na memória para visualização e exibição imediata
-        const mockCreated: ProductRow = {
-          id: `local-${Date.now()}`,
-          ...productPayload,
-        };
-        setProducts((prev) => [mockCreated, ...prev]);
-        toast.success(`"${newProd.name}" adicionado à vitrine!`);
-      } else if (data && data[0]) {
-        setProducts((prev) => [data[0], ...prev]);
-        toast.success(`Produto "${newProd.name}" cadastrado com sucesso!`);
+      const payload = {
+        name: formData.name.trim(),
+        category: formData.category,
+        price: Number(formData.price),
+        stock_quantity: Number(formData.stock_quantity) || 0,
+        description: formData.description.trim() || null,
+        sensory_notes: formData.sensory_notes.trim() || null,
+        benefits: benefitsArray,
+        image_url: formData.image_url.trim() || null,
+        weight_grams: Number(formData.weight_grams) || 150,
+        package_width_cm: Number(formData.package_width_cm) || 10,
+        package_height_cm: Number(formData.package_height_cm) || 10,
+        package_depth_cm: Number(formData.package_depth_cm) || 5,
+        is_active: true,
+      };
+
+      if (editingId) {
+        // Atualizar produto existente
+        const { data, error } = await supabase
+          .from("products")
+          .update(payload)
+          .eq("id", editingId)
+          .select();
+
+        if (error) {
+          toast.error(`Erro ao atualizar: ${error.message}`);
+          return;
+        }
+
+        setProducts((prev) =>
+          prev.map((item) => (item.id === editingId ? { ...item, ...payload } : item))
+        );
+        toast.success(`Produto "${formData.name}" atualizado com sucesso!`);
+      } else {
+        // Criar novo produto
+        const slug = formData.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)+/g, "") + "-" + Date.now().toString(36).slice(-4);
+
+        const newRecord = { slug, ...payload };
+
+        const { data, error } = await supabase
+          .from("products")
+          .insert([newRecord])
+          .select();
+
+        if (error) {
+          toast.error(`Erro ao cadastrar: ${error.message}`);
+          return;
+        }
+
+        if (data && data[0]) {
+          setProducts((prev) => [data[0], ...prev]);
+        } else {
+          setProducts((prev) => [{ id: `prod-${Date.now()}`, ...newRecord }, ...prev]);
+        }
+        toast.success(`Novo produto "${formData.name}" cadastrado na loja!`);
       }
 
       setOpenModal(false);
-      setNewProd({
-        name: "",
-        category: "sabonetes",
-        price: "",
-        stock_quantity: "",
-        description: "",
-        sensory_notes: "",
-        benefits: "",
-        image_url: "",
-        weight_grams: "150",
-        package_width_cm: "10",
-        package_height_cm: "10",
-        package_depth_cm: "5",
-      });
     } catch {
-      toast.error("Erro inesperado ao cadastrar produto.");
+      toast.error("Erro inesperado ao salvar produto.");
     } finally {
-      setCreating(false);
+      setSavingProduct(false);
+    }
+  };
+
+  // Excluir produto
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (!window.confirm(`Tem certeza que deseja remover "${name}" da loja?`)) return;
+
+    try {
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) {
+        toast.error(`Erro ao excluir: ${error.message}`);
+        return;
+      }
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+      toast.success(`"${name}" removido com sucesso.`);
+    } catch {
+      toast.error("Não foi possível excluir o produto.");
     }
   };
 
@@ -231,9 +307,9 @@ export function StockManagement() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold">Controle de Estoque</h2>
+          <h2 className="text-xl font-semibold">Catálogo e Controle de Produtos</h2>
           <p className="text-xs text-muted-foreground">
-            Ajuste quantidades, preços, visibilidade ou cadastre novas alquimias botânicas.
+            Altere preços, estoque, descrições botânicas, aromas, fotos ou cadastre novas alquimias.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -243,7 +319,7 @@ export function StockManagement() {
           <Button
             size="sm"
             className="gap-1.5 bg-primary text-primary-foreground shadow-xs hover:bg-primary/90"
-            onClick={() => setOpenModal(true)}
+            onClick={handleOpenCreateModal}
           >
             <Plus className="h-4 w-4" /> Novo Produto
           </Button>
@@ -256,7 +332,7 @@ export function StockManagement() {
             <thead className="border-b bg-muted/50 text-xs font-medium text-muted-foreground">
               <tr>
                 <th className="p-4">Foto</th>
-                <th className="p-4">Produto</th>
+                <th className="p-4">Produto & Aroma</th>
                 <th className="p-4">Categoria</th>
                 <th className="p-4">Preço (R$)</th>
                 <th className="p-4">Qtd. em Estoque</th>
@@ -272,16 +348,21 @@ export function StockManagement() {
                       <img
                         src={p.image_url}
                         alt={p.name}
-                        className="h-10 w-10 rounded-md object-cover border"
+                        className="h-12 w-12 rounded-md object-cover border"
                       />
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-md border bg-muted text-muted-foreground">
-                        <ImageIcon className="h-4 w-4" />
+                      <div className="flex h-12 w-12 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+                        <ImageIcon className="h-5 w-5" />
                       </div>
                     )}
                   </td>
-                  <td className="p-4">
+                  <td className="p-4 max-w-xs">
                     <p className="font-medium text-foreground">{p.name}</p>
+                    {p.sensory_notes && (
+                      <p className="text-xs text-muted-foreground line-clamp-1 italic">
+                        {p.sensory_notes}
+                      </p>
+                    )}
                   </td>
                   <td className="p-4">
                     <Badge variant="outline" className="capitalize text-xs">
@@ -292,7 +373,7 @@ export function StockManagement() {
                     <Input
                       type="number"
                       step="0.01"
-                      className="w-28 h-8 text-xs"
+                      className="w-28 h-8 text-xs font-medium"
                       value={p.price}
                       onChange={(e) => updateProductField(p.id, "price", e.target.value)}
                     />
@@ -320,20 +401,42 @@ export function StockManagement() {
                     />
                   </td>
                   <td className="p-4 text-right">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 gap-1 text-xs"
-                      onClick={() => handleSaveProduct(p)}
-                      disabled={savingId === p.id}
-                    >
-                      {savingId === p.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Save className="h-3.5 w-3.5 text-primary" />
-                      )}
-                      Salvar
-                    </Button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-1 text-xs"
+                        title="Editar textos, foto e dimensões"
+                        onClick={() => handleOpenEditModal(p)}
+                      >
+                        <Edit className="h-3.5 w-3.5 text-foreground" />
+                        Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="h-8 gap-1 text-xs bg-primary text-primary-foreground"
+                        title="Salvar alterações de preço e estoque"
+                        onClick={() => handleQuickSave(p)}
+                        disabled={savingId === p.id}
+                      >
+                        {savingId === p.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Save className="h-3.5 w-3.5" />
+                        )}
+                        Salvar
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        title="Excluir produto"
+                        onClick={() => handleDeleteProduct(p.id, p.name)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -342,27 +445,30 @@ export function StockManagement() {
         </div>
       </div>
 
-      {/* Modal de Cadastro de Novo Produto */}
+      {/* Modal de Criação / Edição de Produto Completo */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-display text-2xl">
-              <Sparkles className="h-5 w-5 text-accent" /> Adicionar Novo Produto Botânico
+              <Sparkles className="h-5 w-5 text-accent" />
+              {editingId ? "Editar Detalhes do Produto" : "Adicionar Novo Produto Botânico"}
             </DialogTitle>
             <DialogDescription>
-              Preencha as informações do produto, foto e dimensões para o cálculo de frete.
+              {editingId
+                ? "Edite o nome, aromas, descrição botânica, benefícios, imagens e dimensões."
+                : "Preencha as informações do produto, foto e dimensões para o cálculo de frete."}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateProduct} className="space-y-4 py-2">
+          <form onSubmit={handleSaveModal} className="space-y-4 py-2">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="name">Nome do Produto *</Label>
                 <Input
                   id="name"
                   placeholder="Ex: Sabonete Rosa Mosqueta e Argila Branca"
-                  value={newProd.name}
-                  onChange={(e) => setNewProd((p) => ({ ...p, name: e.target.value }))}
+                  value={formData.name}
+                  onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
                   required
                 />
               </div>
@@ -372,8 +478,8 @@ export function StockManagement() {
                 <select
                   id="category"
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-2xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={newProd.category}
-                  onChange={(e) => setNewProd((p) => ({ ...p, category: e.target.value }))}
+                  value={formData.category}
+                  onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value }))}
                 >
                   <option value="sabonetes">Sabonetes</option>
                   <option value="escalda_pes">Escalda-pés</option>
@@ -389,31 +495,31 @@ export function StockManagement() {
                   type="number"
                   step="0.01"
                   placeholder="28.00"
-                  value={newProd.price}
-                  onChange={(e) => setNewProd((p) => ({ ...p, price: e.target.value }))}
+                  value={formData.price}
+                  onChange={(e) => setFormData((p) => ({ ...p, price: e.target.value }))}
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="stock">Estoque Inicial (unidades)</Label>
+                <Label htmlFor="stock">Estoque Disponível (unidades)</Label>
                 <Input
                   id="stock"
                   type="number"
                   placeholder="30"
-                  value={newProd.stock_quantity}
-                  onChange={(e) => setNewProd((p) => ({ ...p, stock_quantity: e.target.value }))}
+                  value={formData.stock_quantity}
+                  onChange={(e) => setFormData((p) => ({ ...p, stock_quantity: e.target.value }))}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="weight">Peso do Produto (Gramas)</Label>
+                <Label htmlFor="weight">Peso (Gramas)</Label>
                 <Input
                   id="weight"
                   type="number"
                   placeholder="150"
-                  value={newProd.weight_grams}
-                  onChange={(e) => setNewProd((p) => ({ ...p, weight_grams: e.target.value }))}
+                  value={formData.weight_grams}
+                  onChange={(e) => setFormData((p) => ({ ...p, weight_grams: e.target.value }))}
                 />
               </div>
             </div>
@@ -422,9 +528,9 @@ export function StockManagement() {
             <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
               <Label className="text-xs font-semibold">Imagem do Produto</Label>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                {newProd.image_url ? (
+                {formData.image_url ? (
                   <img
-                    src={newProd.image_url}
+                    src={formData.image_url}
                     alt="Prévia"
                     className="h-20 w-20 rounded-md object-cover border"
                   />
@@ -447,31 +553,31 @@ export function StockManagement() {
                     type="url"
                     placeholder="Ou cole a URL direta da imagem (https://...)"
                     className="text-xs"
-                    value={newProd.image_url}
-                    onChange={(e) => setNewProd((p) => ({ ...p, image_url: e.target.value }))}
+                    value={formData.image_url}
+                    onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value }))}
                   />
                 </div>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="notes">Notas Sensoriais / Aroma</Label>
+              <Label htmlFor="notes">Notas Sensoriais / Família Olfativa</Label>
               <Input
                 id="notes"
-                placeholder="Ex: Rosas selvagens, argila mineral, toque aveludado de gerânio"
-                value={newProd.sensory_notes}
-                onChange={(e) => setNewProd((p) => ({ ...p, sensory_notes: e.target.value }))}
+                placeholder="Ex: Rosas selvagens, argila mineral, gerânio e sândalo suave"
+                value={formData.sensory_notes}
+                onChange={(e) => setFormData((p) => ({ ...p, sensory_notes: e.target.value }))}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="desc">Descrição Completa</Label>
+              <Label htmlFor="desc">História Botânica e Modo de Usar (Descrição)</Label>
               <Textarea
                 id="desc"
-                placeholder="Conte a história botânica do produto, intenção e modo de usar..."
-                className="h-20 text-xs"
-                value={newProd.description}
-                onChange={(e) => setNewProd((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Descreva as propriedades botânicas, intenção energética e ritual de uso..."
+                className="h-24 text-xs"
+                value={formData.description}
+                onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
               />
             </div>
 
@@ -479,25 +585,25 @@ export function StockManagement() {
               <Label htmlFor="benefits">Benefícios (1 por linha)</Label>
               <Textarea
                 id="benefits"
-                placeholder="Regeneração da pele&#10;Efeito clareador suave&#10;Aroma relaxante para o banho"
-                className="h-16 text-xs"
-                value={newProd.benefits}
-                onChange={(e) => setNewProd((p) => ({ ...p, benefits: e.target.value }))}
+                placeholder="Regeneração e firmeza para a pele&#10;Toque aveludado e relaxante&#10;Argila pura biocompatível"
+                className="h-20 text-xs"
+                value={formData.benefits}
+                onChange={(e) => setFormData((p) => ({ ...p, benefits: e.target.value }))}
               />
             </div>
 
             {/* Dimensões de Embalagem para Envio */}
             <div className="rounded-lg border bg-muted/20 p-3">
               <p className="text-xs font-semibold mb-2 text-muted-foreground">
-                Dimensões da Embalagem para Cálculo de Frete (cm)
+                Dimensões da Embalagem para Cálculo de Frete dos Correios / Transportadora (cm)
               </p>
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <Label className="text-[10px]">Largura (cm)</Label>
                   <Input
                     type="number"
-                    value={newProd.package_width_cm}
-                    onChange={(e) => setNewProd((p) => ({ ...p, package_width_cm: e.target.value }))}
+                    value={formData.package_width_cm}
+                    onChange={(e) => setFormData((p) => ({ ...p, package_width_cm: e.target.value }))}
                     className="h-8 text-xs"
                   />
                 </div>
@@ -505,8 +611,8 @@ export function StockManagement() {
                   <Label className="text-[10px]">Altura (cm)</Label>
                   <Input
                     type="number"
-                    value={newProd.package_height_cm}
-                    onChange={(e) => setNewProd((p) => ({ ...p, package_height_cm: e.target.value }))}
+                    value={formData.package_height_cm}
+                    onChange={(e) => setFormData((p) => ({ ...p, package_height_cm: e.target.value }))}
                     className="h-8 text-xs"
                   />
                 </div>
@@ -514,8 +620,8 @@ export function StockManagement() {
                   <Label className="text-[10px]">Profundidade (cm)</Label>
                   <Input
                     type="number"
-                    value={newProd.package_depth_cm}
-                    onChange={(e) => setNewProd((p) => ({ ...p, package_depth_cm: e.target.value }))}
+                    value={formData.package_depth_cm}
+                    onChange={(e) => setFormData((p) => ({ ...p, package_depth_cm: e.target.value }))}
                     className="h-8 text-xs"
                   />
                 </div>
@@ -526,9 +632,9 @@ export function StockManagement() {
               <Button type="button" variant="outline" onClick={() => setOpenModal(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={creating} className="gap-1.5">
-                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                Cadastrar Produto
+              <Button type="submit" disabled={savingProduct} className="gap-1.5">
+                {savingProduct ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {editingId ? "Salvar Alterações" : "Cadastrar Produto"}
               </Button>
             </div>
           </form>
