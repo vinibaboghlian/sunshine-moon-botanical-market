@@ -31,3 +31,4 @@ DROP POLICY IF EXISTS "Public full access orders" ON public.orders FOR ALL TO pu
 
 GRANT ALL ON public.order_items TO anon, authenticated, service_role;
 DROP POLICY IF EXISTS "Public full access order_items" ON public.order_items FOR ALL TO public USING (true) WITH CHECK (true);
+

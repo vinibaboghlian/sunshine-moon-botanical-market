@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Plus, Save, Upload, Image as ImageIcon, Sparkles, Edit, Trash2 } from "lucide-react";
+import { Loader2, Plus, Save, Upload, Image as ImageIcon, Sparkles, Edit, Trash2, Droplets, Box } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,7 @@ export type ProductRow = {
   sensory_notes?: string | null;
   benefits?: string[];
   weight_grams?: number;
+  unit?: "g" | "ml";
   package_width_cm?: number;
   package_height_cm?: number;
   package_depth_cm?: number;
@@ -55,6 +56,7 @@ export function StockManagement() {
     benefits: "",
     image_url: "",
     weight_grams: "150",
+    unit: "g" as "g" | "ml",
     package_width_cm: "10",
     package_height_cm: "10",
     package_depth_cm: "5",
@@ -70,16 +72,31 @@ export function StockManagement() {
 
       if (error) throw error;
       if (data && data.length > 0) {
-        setProducts(data);
+        // Detectar unidade padrão baseado na categoria ou descrição/nome
+        const formatted: ProductRow[] = data.map((p) => {
+          const isLiquid =
+            p.category === "home_spray" ||
+            p.name.toLowerCase().includes("água") ||
+            p.name.toLowerCase().includes("óleo") ||
+            p.name.toLowerCase().includes("spray") ||
+            p.name.toLowerCase().includes("bruma") ||
+            (p.description && p.description.includes("ml"));
+
+          return {
+            ...p,
+            unit: isLiquid ? "ml" : "g",
+          };
+        });
+        setProducts(formatted);
       } else {
         setProducts([
-          { id: "1", name: "Sabonete Acalanto Lunar", category: "sabonetes", price: 24.0, stock_quantity: 40, is_active: true },
-          { id: "2", name: "Sabonete Purificação Etérica", category: "sabonetes", price: 26.0, stock_quantity: 35, is_active: true },
-          { id: "3", name: "Sabonete Fartura e Realização", category: "sabonetes", price: 25.0, stock_quantity: 38, is_active: true },
-          { id: "4", name: "Escalda-Pés Despertar Energético — Lavanda", category: "escalda_pes", price: 32.0, stock_quantity: 22, is_active: true },
-          { id: "5", name: "Escalda-Pés Despertar Energético — Café", category: "escalda_pes", price: 32.0, stock_quantity: 18, is_active: true },
-          { id: "6", name: "Água de Lençol Brisa Lunar (250ml)", category: "home_spray", price: 42.0, stock_quantity: 15, is_active: true },
-          { id: "7", name: "Kit Alquimia Lunar Completo", category: "kits", price: 110.0, stock_quantity: 8, is_active: true },
+          { id: "1", name: "Sabonete Acalanto Lunar", category: "sabonetes", price: 24.0, stock_quantity: 40, is_active: true, unit: "g", weight_grams: 120 },
+          { id: "2", name: "Sabonete Purificação Etérica", category: "sabonetes", price: 26.0, stock_quantity: 35, is_active: true, unit: "g", weight_grams: 130 },
+          { id: "3", name: "Sabonete Fartura e Realização", category: "sabonetes", price: 25.0, stock_quantity: 38, is_active: true, unit: "g", weight_grams: 120 },
+          { id: "4", name: "Escalda-Pés Despertar Energético — Lavanda", category: "escalda_pes", price: 32.0, stock_quantity: 22, is_active: true, unit: "g", weight_grams: 250 },
+          { id: "5", name: "Escalda-Pés Despertar Energético — Café", category: "escalda_pes", price: 32.0, stock_quantity: 18, is_active: true, unit: "g", weight_grams: 250 },
+          { id: "6", name: "Água de Lençol Brisa Lunar (250ml)", category: "home_spray", price: 38.0, stock_quantity: 30, is_active: true, unit: "ml", weight_grams: 300 },
+          { id: "7", name: "Kit Alquimia Lunar Completo", category: "kits", price: 110.0, stock_quantity: 8, is_active: true, unit: "g", weight_grams: 600 },
         ]);
       }
     } catch {
@@ -121,12 +138,8 @@ export function StockManagement() {
         return;
       }
 
-      if (data && data.length === 0) {
-        toast.warning(`Atenção: execute o script fix-permissions.sql no Supabase para salvar alterações.`);
-      } else {
-        toast.success(`"${product.name}" atualizado para ${formatBRL(numericPrice)}!`);
-      }
-    } catch (err: unknown) {
+      toast.success(`"${product.name}" atualizado para ${formatBRL(numericPrice)}!`);
+    } catch {
       toast.error("Falha ao salvar produto.");
     } finally {
       setSavingId(null);
@@ -162,6 +175,7 @@ export function StockManagement() {
       benefits: "",
       image_url: "",
       weight_grams: "150",
+      unit: "g",
       package_width_cm: "10",
       package_height_cm: "10",
       package_depth_cm: "5",
@@ -169,9 +183,18 @@ export function StockManagement() {
     setOpenModal(true);
   };
 
-  // Abrir modal para editar produto existente (textos, aromas, benefícios, fotos)
+  // Abrir modal para editar produto existente
   const handleOpenEditModal = (p: ProductRow) => {
     setEditingId(p.id);
+
+    // Identificar se é líquido ou sólido
+    const isLiquid =
+      p.unit === "ml" ||
+      p.category === "home_spray" ||
+      p.name.toLowerCase().includes("água") ||
+      p.name.toLowerCase().includes("spray") ||
+      p.name.toLowerCase().includes("óleo");
+
     setFormData({
       name: p.name || "",
       category: p.category || "sabonetes",
@@ -182,11 +205,22 @@ export function StockManagement() {
       benefits: (p.benefits || []).join("\n"),
       image_url: p.image_url || "",
       weight_grams: String(p.weight_grams || "150"),
+      unit: isLiquid ? "ml" : "g",
       package_width_cm: String(p.package_width_cm || "10"),
       package_height_cm: String(p.package_height_cm || "10"),
       package_depth_cm: String(p.package_depth_cm || "5"),
     });
     setOpenModal(true);
+  };
+
+  // Ao alterar a categoria no formulário, sugerir a unidade adequada
+  const handleCategoryChange = (newCategory: string) => {
+    const isLiquid = newCategory === "home_spray";
+    setFormData((p) => ({
+      ...p,
+      category: newCategory,
+      unit: isLiquid ? "ml" : p.unit,
+    }));
   };
 
   // Salvar no Modal (Criação ou Edição Completa)
@@ -225,12 +259,11 @@ export function StockManagement() {
       };
 
       if (editingId) {
-        // Atualizar produto existente
-        const { data, error } = await supabase
+        // Atualizar produto existente no Supabase
+        const { error } = await supabase
           .from("products")
           .update(payload)
-          .eq("id", editingId)
-          .select();
+          .eq("id", editingId);
 
         if (error) {
           toast.error(`Erro ao atualizar: ${error.message}`);
@@ -238,11 +271,13 @@ export function StockManagement() {
         }
 
         setProducts((prev) =>
-          prev.map((item) => (item.id === editingId ? { ...item, ...payload } : item))
+          prev.map((item) =>
+            item.id === editingId ? { ...item, ...payload, unit: formData.unit } : item
+          )
         );
         toast.success(`Produto "${formData.name}" atualizado com sucesso!`);
       } else {
-        // Criar novo produto
+        // Criar novo produto no Supabase
         const slug = formData.name
           .toLowerCase()
           .normalize("NFD")
@@ -263,9 +298,9 @@ export function StockManagement() {
         }
 
         if (data && data[0]) {
-          setProducts((prev) => [data[0], ...prev]);
+          setProducts((prev) => [{ ...data[0], unit: formData.unit }, ...prev]);
         } else {
-          setProducts((prev) => [{ id: `prod-${Date.now()}`, ...newRecord }, ...prev]);
+          setProducts((prev) => [{ id: `prod-${Date.now()}`, ...newRecord, unit: formData.unit }, ...prev]);
         }
         toast.success(`Novo produto "${formData.name}" cadastrado na loja!`);
       }
@@ -309,7 +344,7 @@ export function StockManagement() {
         <div>
           <h2 className="text-xl font-semibold">Catálogo e Controle de Produtos</h2>
           <p className="text-xs text-muted-foreground">
-            Altere preços, estoque, descrições botânicas, aromas, fotos ou cadastre novas alquimias.
+            Altere preços, estoque, descrições botânicas, aromas, fotos, tipo (sólido/líquido) ou cadastre novos itens.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -333,7 +368,7 @@ export function StockManagement() {
               <tr>
                 <th className="p-4">Foto</th>
                 <th className="p-4">Produto & Aroma</th>
-                <th className="p-4">Categoria</th>
+                <th className="p-4">Categoria / Tipo</th>
                 <th className="p-4">Preço (R$)</th>
                 <th className="p-4">Qtd. em Estoque</th>
                 <th className="p-4 text-center">Ativo na Loja</th>
@@ -365,9 +400,24 @@ export function StockManagement() {
                     )}
                   </td>
                   <td className="p-4">
-                    <Badge variant="outline" className="capitalize text-xs">
-                      {p.category.replace("_", " ")}
-                    </Badge>
+                    <div className="flex flex-col gap-1 items-start">
+                      <Badge variant="outline" className="capitalize text-xs">
+                        {p.category.replace("_", " ")}
+                      </Badge>
+                      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground font-mono">
+                        {p.unit === "ml" ? (
+                          <>
+                            <Droplets className="h-3 w-3 text-sky-600" />
+                            {p.weight_grams} ml (Líquido)
+                          </>
+                        ) : (
+                          <>
+                            <Box className="h-3 w-3 text-amber-700" />
+                            {p.weight_grams} g (Sólido)
+                          </>
+                        )}
+                      </span>
+                    </div>
                   </td>
                   <td className="p-4">
                     <Input
@@ -406,7 +456,7 @@ export function StockManagement() {
                         size="sm"
                         variant="outline"
                         className="h-8 gap-1 text-xs"
-                        title="Editar textos, foto e dimensões"
+                        title="Editar textos, foto, unidade (g/ml) e dimensões"
                         onClick={() => handleOpenEditModal(p)}
                       >
                         <Edit className="h-3.5 w-3.5 text-foreground" />
@@ -416,7 +466,7 @@ export function StockManagement() {
                         size="sm"
                         variant="default"
                         className="h-8 gap-1 text-xs bg-primary text-primary-foreground"
-                        title="Salvar alterações de preço e estoque"
+                        title="Salvar alterações rápidas de preço e estoque"
                         onClick={() => handleQuickSave(p)}
                         disabled={savingId === p.id}
                       >
@@ -455,8 +505,8 @@ export function StockManagement() {
             </DialogTitle>
             <DialogDescription>
               {editingId
-                ? "Edite o nome, aromas, descrição botânica, benefícios, imagens e dimensões."
-                : "Preencha as informações do produto, foto e dimensões para o cálculo de frete."}
+                ? "Edite nome, aromas, se é sólido (g) ou líquido (ml), descrição botânica, benefícios e foto."
+                : "Preencha as informações do produto, tipo físico (sólido ou líquido), foto e dimensões de envio."}
             </DialogDescription>
           </DialogHeader>
 
@@ -466,7 +516,7 @@ export function StockManagement() {
                 <Label htmlFor="name">Nome do Produto *</Label>
                 <Input
                   id="name"
-                  placeholder="Ex: Sabonete Rosa Mosqueta e Argila Branca"
+                  placeholder="Ex: Sabonete Rosa Mosqueta ou Água Perfumada Lunar"
                   value={formData.name}
                   onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
                   required
@@ -479,7 +529,7 @@ export function StockManagement() {
                   id="category"
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-2xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={formData.category}
-                  onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value }))}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
                 >
                   <option value="sabonetes">Sabonetes</option>
                   <option value="escalda_pes">Escalda-pés</option>
@@ -512,15 +562,65 @@ export function StockManagement() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="weight">Peso (Gramas)</Label>
-                <Input
-                  id="weight"
-                  type="number"
-                  placeholder="150"
-                  value={formData.weight_grams}
-                  onChange={(e) => setFormData((p) => ({ ...p, weight_grams: e.target.value }))}
-                />
+              {/* Seletor Radio Button: Sólido (g) ou Líquido (ml) */}
+              <div className="space-y-2 rounded-lg border bg-muted/30 p-2.5 sm:col-span-2">
+                <Label className="text-xs font-semibold">Tipo Físico do Produto (Unidade de Medida)</Label>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <label
+                    className={`flex items-center gap-2 rounded-md border p-2 cursor-pointer transition-colors ${
+                      formData.unit === "g"
+                        ? "border-primary bg-primary/10 text-foreground font-medium"
+                        : "border-input bg-background hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="product_unit"
+                      value="g"
+                      checked={formData.unit === "g"}
+                      onChange={() => setFormData((p) => ({ ...p, unit: "g" }))}
+                      className="accent-primary"
+                    />
+                    <Box className="h-4 w-4 text-amber-700" />
+                    <span className="text-xs">Sólido — Gramas (g)</span>
+                  </label>
+
+                  <label
+                    className={`flex items-center gap-2 rounded-md border p-2 cursor-pointer transition-colors ${
+                      formData.unit === "ml"
+                        ? "border-primary bg-primary/10 text-foreground font-medium"
+                        : "border-input bg-background hover:bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="product_unit"
+                      value="ml"
+                      checked={formData.unit === "ml"}
+                      onChange={() => setFormData((p) => ({ ...p, unit: "ml" }))}
+                      className="accent-primary"
+                    />
+                    <Droplets className="h-4 w-4 text-sky-600" />
+                    <span className="text-xs">Líquido — Mililitros (ml)</span>
+                  </label>
+                </div>
+
+                <div className="mt-2 flex items-center gap-2">
+                  <Label htmlFor="weight" className="text-xs whitespace-nowrap">
+                    {formData.unit === "ml" ? "Volume Líquido (ml):" : "Peso do Produto (g):"}
+                  </Label>
+                  <Input
+                    id="weight"
+                    type="number"
+                    placeholder={formData.unit === "ml" ? "250" : "120"}
+                    value={formData.weight_grams}
+                    onChange={(e) => setFormData((p) => ({ ...p, weight_grams: e.target.value }))}
+                    className="h-8 w-32 text-xs"
+                  />
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {formData.unit === "ml" ? "ml" : "gramas"}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -595,7 +695,7 @@ export function StockManagement() {
             {/* Dimensões de Embalagem para Envio */}
             <div className="rounded-lg border bg-muted/20 p-3">
               <p className="text-xs font-semibold mb-2 text-muted-foreground">
-                Dimensões da Embalagem para Cálculo de Frete dos Correios / Transportadora (cm)
+                Dimensões da Embalagem para Cálculo de Frete (cm)
               </p>
               <div className="grid grid-cols-3 gap-2">
                 <div>
