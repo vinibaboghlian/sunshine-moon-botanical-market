@@ -193,7 +193,22 @@ function Index() {
                 <div><h3 className="text-lg">Benefícios</h3>
                   <ul className="mt-1 list-inside list-disc text-muted-foreground">{detail.benefits.map((b) => <li key={b}>{b}</li>)}</ul></div>
                 <div><h3 className="text-lg">Especificações</h3>
-                  <p className="text-muted-foreground">Peso: {detail.weight_grams} g · Embalagem: {detail.package_width_cm}×{detail.package_height_cm}×{detail.package_depth_cm} cm</p></div>
+                  {(() => {
+                    const isLiquid =
+                      detail.category === "home_spray" ||
+                      detail.name.toLowerCase().includes("água") ||
+                      detail.name.toLowerCase().includes("óleo") ||
+                      detail.name.toLowerCase().includes("spray") ||
+                      detail.name.toLowerCase().includes("bruma") ||
+                      (detail.description && detail.description.includes("ml"));
+
+                    return (
+                      <p className="text-muted-foreground">
+                        {isLiquid ? "Volume Líquido" : "Peso"}: {detail.weight_grams} {isLiquid ? "ml" : "g"} · Embalagem: {detail.package_width_cm}×{detail.package_height_cm}×{detail.package_depth_cm} cm
+                      </p>
+                    );
+                  })()}
+                </div>
                 <div className="flex items-center justify-between border-t pt-4">
                   <span className="text-xl font-semibold">{formatBRL(detail.price)}</span>
                   <Button onClick={() => { add(detail); setDetail(null); }}>Adicionar ao Carrinho</Button>
