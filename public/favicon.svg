@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Soft circular botanical aura background -->
+  <circle cx="32" cy="32" r="30" fill="#2E4A3D" />
+  <!-- Golden Moon Crescent -->
+  <path d="M38 14 C27 14 18 23 18 34 C18 45 27 54 38 54 C31 50 26 43 26 34 C26 25 31 18 38 14 Z" fill="#E5C158" />
+  <!-- Delicate botanical branch/leaves entwined with moon -->
+  <path d="M26 38 C28 34 32 32 38 31" stroke="#F4EDE4" stroke-width="2" stroke-linecap="round" />
+  <path d="M31 33 C31 30 33 28 35 29 C35 32 33 33 31 33 Z" fill="#F4EDE4" />
+  <path d="M34 32 C35 29 38 28 39 30 C38 33 36 33 34 32 Z" fill="#F4EDE4" />
+  <circle cx="39" cy="24" r="1.5" fill="#E5C158" />
+  <circle cx="43" cy="28" r="1.5" fill="#E5C158" />
+</svg>
