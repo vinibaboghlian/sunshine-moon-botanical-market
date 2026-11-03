@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { OrdersKanban } from "@/components/admin/OrdersKanban";
 import { StockManagement } from "@/components/admin/StockManagement";
+import { CategoryManagement } from "@/components/admin/CategoryManagement";
 import { AdminMetrics } from "@/components/admin/AdminMetrics";
 import type { AdminOrder } from "@/components/admin/OrderDetailsDialog";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/admin")({
 function AdminDashboardRoute() {
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"kanban" | "stock" | "metrics">("kanban");
+  const [activeTab, setActiveTab] = useState<"kanban" | "stock" | "categories" | "metrics">("kanban");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -309,12 +310,14 @@ function AdminDashboardRoute() {
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight">
               {activeTab === "kanban" && "Gestão de Pedidos (Kanban)"}
-              {activeTab === "stock" && "Estoque de Produtos"}
+              {activeTab === "stock" && "Estoque e Produtos"}
+              {activeTab === "categories" && "Gestão de Categorias"}
               {activeTab === "metrics" && "Métricas Operacionais"}
             </h1>
             <p className="text-xs text-muted-foreground">
               {activeTab === "kanban" && "Arraste os pedidos entre as etapas para atualizar o status em tempo real."}
               {activeTab === "stock" && "Monitore e edite preços, quantidades e exibição na vitrine."}
+              {activeTab === "categories" && "Crie, edite os nomes e organize as seções do catálogo da loja."}
               {activeTab === "metrics" && "Visão geral de faturamento, ticket médio e volume de pedidos."}
             </p>
           </div>
@@ -339,6 +342,8 @@ function AdminDashboardRoute() {
         )}
 
         {activeTab === "stock" && <StockManagement />}
+
+        {activeTab === "categories" && <CategoryManagement />}
 
         {activeTab === "metrics" && <AdminMetrics orders={orders} />}
       </main>

@@ -38,6 +38,24 @@ export type ProductRow = {
 
 export function StockManagement() {
   const [products, setProducts] = useState<ProductRow[]>([]);
+  const [categoriesList, setCategoriesList] = useState<{ id: string; label: string }[]>([
+    { id: "sabonetes", label: "Sabonetes" },
+    { id: "escalda_pes", label: "Escalda-pés" },
+    { id: "home_spray", label: "Água de Lençol / Spray" },
+    { id: "kits", label: "Kits & Rituais" },
+  ]);
+
+  const loadCategories = async () => {
+    try {
+      const { data } = await supabase.from("categories").select("*").order("created_at");
+      if (data && data.length > 0) {
+        setCategoriesList(data);
+      } else {
+        const saved = localStorage.getItem("sunshine_categories");
+        if (saved) setCategoriesList(JSON.parse(saved));
+      }
+    } catch {}
+  };
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -108,6 +126,7 @@ export function StockManagement() {
 
   useEffect(() => {
     loadProducts();
+    loadCategories();
   }, []);
 
   const updateProductField = (id: string, field: keyof ProductRow, value: unknown) => {
@@ -531,10 +550,11 @@ export function StockManagement() {
                   value={formData.category}
                   onChange={(e) => handleCategoryChange(e.target.value)}
                 >
-                  <option value="sabonetes">Sabonetes</option>
-                  <option value="escalda_pes">Escalda-pés</option>
-                  <option value="home_spray">Água de Lençol / Spray</option>
-                  <option value="kits">Kits & Rituais</option>
+                  {categoriesList.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 

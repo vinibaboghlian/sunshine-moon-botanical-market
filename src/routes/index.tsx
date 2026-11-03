@@ -39,6 +39,22 @@ function Index() {
   const [q, setQ] = useState("");
   const [detail, setDetail] = useState<Product | null>(null);
   const [checkout, setCheckout] = useState(false);
+  const [categoriesList, setCategoriesList] = useState<{ id: string; label: string }[]>(CATEGORIES);
+
+  useEffect(() => {
+    supabase.from("categories").select("*").order("created_at").then(({ data }) => {
+      if (data && data.length > 0) {
+        setCategoriesList([{ id: "todos", label: "Todos" }, ...data]);
+      } else {
+        const saved = localStorage.getItem("sunshine_categories");
+        if (saved) {
+          try {
+            setCategoriesList([{ id: "todos", label: "Todos" }, ...JSON.parse(saved)]);
+          } catch {}
+        }
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
@@ -122,8 +138,8 @@ function Index() {
             </Button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3">
-          {CATEGORIES.map((c) => (
+        <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3 scrollbar-none touch-pan-x flex-nowrap -mx-4 px-4 sm:mx-auto">
+          {categoriesList.map((c) => (
             <button key={c.id} onClick={() => setCat(c.id)}
               className={`whitespace-nowrap rounded-full border px-4 py-1.5 text-sm transition ${cat === c.id ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
               {c.label}

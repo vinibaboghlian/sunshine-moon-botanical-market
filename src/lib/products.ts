@@ -16,13 +16,14 @@ const IMAGES: Record<string, string> = {
   "brisa-lunar": brisa,
 };
 
-export const CATEGORIES = [
+export const DEFAULT_CATEGORIES = [
   { id: "todos", label: "Todos" },
   { id: "sabonetes", label: "Sabonetes" },
   { id: "escalda_pes", label: "Escalda-pés" },
   { id: "home_spray", label: "Água de lençol" },
   { id: "kits", label: "Kits" },
-] as const;
+];
+export const CATEGORIES = DEFAULT_CATEGORIES;
 
 export type Product = {
   id: string;
