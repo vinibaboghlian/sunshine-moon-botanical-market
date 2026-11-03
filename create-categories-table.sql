@@ -22,3 +22,4 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 4. Remover a restrição fixa CHECK de categoria na tabela products para permitir categorias dinâmicas
 ALTER TABLE public.products DROP CONSTRAINT IF EXISTS products_category_check;
+
