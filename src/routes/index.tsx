@@ -3,12 +3,11 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Minus, Moon, Plus, Search, ShoppingBag, Trash2, User, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { CATEGORIES, productsQuery, type Product } from "@/lib/products";
+import { CATEGORIES, getStoredCategories, productsQuery, type Product } from "@/lib/products";
 import { useCart } from "@/lib/cart";
 import { formatBRL } from "@/lib/checkout-rules";
 import { CheckoutDialog } from "@/components/store/CheckoutDialog";
@@ -40,21 +39,13 @@ function Index() {
   const [q, setQ] = useState("");
   const [detail, setDetail] = useState<Product | null>(null);
   const [checkout, setCheckout] = useState(false);
-  const [categoriesList, setCategoriesList] = useState<{ id: string; label: string }[]>(CATEGORIES);
+  const [categoriesList, setCategoriesList] = useState<{ id: string; label: string }[]>(() => {
+    return [{ id: "todos", label: "Todos" }, ...getStoredCategories().filter((c: { id: string }) => c.id !== "todos")];
+  });
 
   useEffect(() => {
-    supabase.from("categories").select("*").order("created_at").then(({ data }) => {
-      if (data && data.length > 0) {
-        setCategoriesList([{ id: "todos", label: "Todos" }, ...data]);
-      } else {
-        const saved = localStorage.getItem("sunshine_categories");
-        if (saved) {
-          try {
-            setCategoriesList([{ id: "todos", label: "Todos" }, ...JSON.parse(saved)]);
-          } catch {}
-        }
-      }
-    });
+    const cats = getStoredCategories().filter((c: { id: string }) => c.id !== "todos");
+    setCategoriesList([{ id: "todos", label: "Todos" }, ...cats]);
   }, []);
 
   useEffect(() => {

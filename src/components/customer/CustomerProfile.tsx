@@ -66,7 +66,7 @@ export function CustomerProfile({
 
     setSaving(true);
     try {
-      const { error } = await supabase.from("profiles").upsert({
+      const { error } = await (supabase.from as any)("profiles").upsert({
         id: user.id,
         full_name: f.full_name,
         phone: onlyDigits(f.phone),

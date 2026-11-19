@@ -39,8 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function loadProfile(userId: string) {
     try {
-      const { data, error } = await supabase
-        .from("profiles")
+      const { data, error } = await (supabase.from as any)("profiles")
         .select("*")
         .eq("id", userId)
         .maybeSingle();
@@ -50,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data) {
-        setProfile(data as UserProfile);
+        setProfile(data as unknown as UserProfile);
       } else {
         // Mock ou fallback se a tabela profiles ainda não tiver a linha
         setProfile({
@@ -132,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!error && data.user) {
         // Cria perfil básico se a trigger ainda não o fez
-        await supabase.from("profiles").upsert({
+        await (supabase.from as any)("profiles").upsert({
           id: data.user.id,
           full_name: fullName || null,
           role: "customer",

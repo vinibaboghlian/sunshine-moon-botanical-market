@@ -2,7 +2,7 @@ export const STORE_CONFIG = {
   name: "Sunshine Moon Botanical Market",
   tagline: "Autocuidado botânico artesanal",
   whatsapp: {
-    phoneNumber: "5511999999999",
+    phoneNumber: "5511999850660",
     defaultMessage: "Olá! Estava navegando na Sunshine Moon e gostaria de tirar uma dúvida sobre os produtos.",
   },
   shipping: {

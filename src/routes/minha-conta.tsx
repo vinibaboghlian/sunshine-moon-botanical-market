@@ -46,7 +46,7 @@ function CustomerAccountRoute() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setOrders((data as AdminOrder[]) || []);
+      setOrders(((data as unknown) as AdminOrder[]) || []);
     } catch {
       // Falha ao carregar
     } finally {

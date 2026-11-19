@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { formatBRL } from "@/lib/checkout-rules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getStoredProducts, saveStoredProducts, getStoredCategories, type Product } from "@/lib/products";
 
 export type ProductRow = {
   id: string;
@@ -38,22 +38,12 @@ export type ProductRow = {
 
 export function StockManagement() {
   const [products, setProducts] = useState<ProductRow[]>([]);
-  const [categoriesList, setCategoriesList] = useState<{ id: string; label: string }[]>([
-    { id: "sabonetes", label: "Sabonetes" },
-    { id: "escalda_pes", label: "Escalda-pés" },
-    { id: "home_spray", label: "Água de Lençol / Spray" },
-    { id: "kits", label: "Kits & Rituais" },
-  ]);
+  const [categoriesList, setCategoriesList] = useState<{ id: string; label: string }[]>([]);
 
-  const loadCategories = async () => {
+  const loadCategories = () => {
     try {
-      const { data } = await supabase.from("categories").select("*").order("created_at");
-      if (data && data.length > 0) {
-        setCategoriesList(data);
-      } else {
-        const saved = localStorage.getItem("sunshine_categories");
-        if (saved) setCategoriesList(JSON.parse(saved));
-      }
+      const cats = getStoredCategories().filter((c: { id: string }) => c.id !== "todos");
+      setCategoriesList(cats);
     } catch {}
   };
   const [loading, setLoading] = useState(true);
@@ -80,43 +70,39 @@ export function StockManagement() {
     package_depth_cm: "5",
   });
 
-  const loadProducts = async () => {
+  const loadProducts = () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("name");
+      const stored = getStoredProducts();
+      const formatted: ProductRow[] = stored.map((p) => {
+        const isLiquid =
+          p.category === "home_spray" ||
+          p.name.toLowerCase().includes("água") ||
+          p.name.toLowerCase().includes("óleo") ||
+          p.name.toLowerCase().includes("spray") ||
+          p.name.toLowerCase().includes("bruma") ||
+          (p.description && p.description.includes("ml"));
 
-      if (error) throw error;
-      if (data && data.length > 0) {
-        // Detectar unidade padrão baseado na categoria ou descrição/nome
-        const formatted: ProductRow[] = data.map((p) => {
-          const isLiquid =
-            p.category === "home_spray" ||
-            p.name.toLowerCase().includes("água") ||
-            p.name.toLowerCase().includes("óleo") ||
-            p.name.toLowerCase().includes("spray") ||
-            p.name.toLowerCase().includes("bruma") ||
-            (p.description && p.description.includes("ml"));
-
-          return {
-            ...p,
-            unit: isLiquid ? "ml" : "g",
-          };
-        });
-        setProducts(formatted);
-      } else {
-        setProducts([
-          { id: "1", name: "Sabonete Acalanto Lunar", category: "sabonetes", price: 24.0, stock_quantity: 40, is_active: true, unit: "g", weight_grams: 120 },
-          { id: "2", name: "Sabonete Purificação Etérica", category: "sabonetes", price: 26.0, stock_quantity: 35, is_active: true, unit: "g", weight_grams: 130 },
-          { id: "3", name: "Sabonete Fartura e Realização", category: "sabonetes", price: 25.0, stock_quantity: 38, is_active: true, unit: "g", weight_grams: 120 },
-          { id: "4", name: "Escalda-Pés Despertar Energético — Lavanda", category: "escalda_pes", price: 32.0, stock_quantity: 22, is_active: true, unit: "g", weight_grams: 250 },
-          { id: "5", name: "Escalda-Pés Despertar Energético — Café", category: "escalda_pes", price: 32.0, stock_quantity: 18, is_active: true, unit: "g", weight_grams: 250 },
-          { id: "6", name: "Água de Lençol Brisa Lunar (250ml)", category: "home_spray", price: 38.0, stock_quantity: 30, is_active: true, unit: "ml", weight_grams: 300 },
-          { id: "7", name: "Kit Alquimia Lunar Completo", category: "kits", price: 110.0, stock_quantity: 8, is_active: true, unit: "g", weight_grams: 600 },
-        ]);
-      }
+        return {
+          id: p.id,
+          slug: p.slug,
+          name: p.name,
+          category: p.category,
+          price: p.price,
+          stock_quantity: p.stock_quantity,
+          is_active: p.is_active,
+          image_url: p.image_url || p.image,
+          description: p.description,
+          sensory_notes: p.sensory_notes,
+          benefits: p.benefits,
+          weight_grams: p.weight_grams,
+          unit: isLiquid ? "ml" : "g",
+          package_width_cm: p.package_width_cm,
+          package_height_cm: p.package_height_cm,
+          package_depth_cm: p.package_depth_cm,
+        };
+      });
+      setProducts(formatted);
     } catch {
       toast.error("Erro ao carregar estoque.");
     } finally {
@@ -142,20 +128,18 @@ export function StockManagement() {
       const numericPrice = Number(product.price);
       const numericStock = Number(product.stock_quantity);
 
-      const { data, error } = await supabase
-        .from("products")
-        .update({
-          stock_quantity: numericStock,
-          price: numericPrice,
-          is_active: product.is_active,
-        })
-        .eq("id", product.id)
-        .select();
-
-      if (error) {
-        toast.error(`Erro ao salvar no banco: ${error.message}`);
-        return;
-      }
+      const updated = products.map((p) =>
+        p.id === product.id
+          ? {
+              ...p,
+              price: numericPrice,
+              stock_quantity: numericStock,
+              is_active: product.is_active,
+            }
+          : p
+      );
+      setProducts(updated);
+      saveStoredProducts(updated as any);
 
       toast.success(`"${product.name}" atualizado para ${formatBRL(numericPrice)}!`);
     } catch {
@@ -278,25 +262,13 @@ export function StockManagement() {
       };
 
       if (editingId) {
-        // Atualizar produto existente no Supabase
-        const { error } = await supabase
-          .from("products")
-          .update(payload)
-          .eq("id", editingId);
-
-        if (error) {
-          toast.error(`Erro ao atualizar: ${error.message}`);
-          return;
-        }
-
-        setProducts((prev) =>
-          prev.map((item) =>
-            item.id === editingId ? { ...item, ...payload, unit: formData.unit } : item
-          )
+        const updated = products.map((item) =>
+          item.id === editingId ? { ...item, ...payload, unit: formData.unit } : item
         );
+        setProducts(updated);
+        saveStoredProducts(updated as any);
         toast.success(`Produto "${formData.name}" atualizado com sucesso!`);
       } else {
-        // Criar novo produto no Supabase
         const slug = formData.name
           .toLowerCase()
           .normalize("NFD")
@@ -304,23 +276,16 @@ export function StockManagement() {
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/(^-|-$)+/g, "") + "-" + Date.now().toString(36).slice(-4);
 
-        const newRecord = { slug, ...payload };
+        const newRecord = {
+          id: `prod-${Date.now()}`,
+          slug,
+          ...payload,
+          unit: formData.unit,
+        };
 
-        const { data, error } = await supabase
-          .from("products")
-          .insert([newRecord])
-          .select();
-
-        if (error) {
-          toast.error(`Erro ao cadastrar: ${error.message}`);
-          return;
-        }
-
-        if (data && data[0]) {
-          setProducts((prev) => [{ ...data[0], unit: formData.unit }, ...prev]);
-        } else {
-          setProducts((prev) => [{ id: `prod-${Date.now()}`, ...newRecord, unit: formData.unit }, ...prev]);
-        }
+        const updated = [newRecord, ...products];
+        setProducts(updated);
+        saveStoredProducts(updated as any);
         toast.success(`Novo produto "${formData.name}" cadastrado na loja!`);
       }
 
@@ -337,12 +302,9 @@ export function StockManagement() {
     if (!window.confirm(`Tem certeza que deseja remover "${name}" da loja?`)) return;
 
     try {
-      const { error } = await supabase.from("products").delete().eq("id", id);
-      if (error) {
-        toast.error(`Erro ao excluir: ${error.message}`);
-        return;
-      }
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+      const updated = products.filter((p) => p.id !== id);
+      setProducts(updated);
+      saveStoredProducts(updated as any);
       toast.success(`"${name}" removido com sucesso.`);
     } catch {
       toast.error("Não foi possível excluir o produto.");

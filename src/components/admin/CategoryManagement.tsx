@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -12,18 +11,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { getStoredCategories, saveStoredCategories } from "@/lib/products";
 
 export type CategoryItem = {
   id: string;
   label: string;
 };
-
-export const DEFAULT_CATEGORIES: CategoryItem[] = [
-  { id: "sabonetes", label: "Sabonetes" },
-  { id: "escalda_pes", label: "Escalda-pés" },
-  { id: "home_spray", label: "Água de lençol" },
-  { id: "kits", label: "Kits" },
-];
 
 export function CategoryManagement({ onCategoriesChange }: { onCategoriesChange?: () => void }) {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
@@ -35,28 +28,13 @@ export function CategoryManagement({ onCategoriesChange }: { onCategoriesChange?
   const [catName, setCatName] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const loadCategories = async () => {
+  const loadCategories = () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("created_at");
-
-      if (error || !data || data.length === 0) {
-        // Tentar obter do localStorage ou padrão
-        const saved = localStorage.getItem("sunshine_categories");
-        if (saved) {
-          setCategories(JSON.parse(saved));
-        } else {
-          setCategories(DEFAULT_CATEGORIES);
-        }
-      } else {
-        setCategories(data);
-        localStorage.setItem("sunshine_categories", JSON.stringify(data));
-      }
+      const cats = getStoredCategories().filter((c: { id: string }) => c.id !== "todos");
+      setCategories(cats);
     } catch {
-      setCategories(DEFAULT_CATEGORIES);
+      // fallback
     } finally {
       setLoading(false);
     }
@@ -101,19 +79,16 @@ export function CategoryManagement({ onCategoriesChange }: { onCategoriesChange?
         label: catName.trim(),
       };
 
-      // Tenta salvar no Supabase
-      const { error } = await supabase.from("categories").upsert([newCategory]);
+      const updated = editingId
+        ? categories.map((item) => (item.id === editingId ? newCategory : item))
+        : [...categories, newCategory];
 
-      if (error) {
-        console.warn("Categories fallback to local storage:", error.message);
-      }
-
-      setCategories((prev) => {
-        const filtered = prev.filter((item) => item.id !== slug);
-        const updated = [...filtered, newCategory];
+      setCategories(updated);
+      saveStoredCategories(updated);
+      // Manter retrocompatibilidade com sunshine_categories se necessário
+      if (typeof window !== "undefined") {
         localStorage.setItem("sunshine_categories", JSON.stringify(updated));
-        return updated;
-      });
+      }
 
       toast.success(
         editingId
@@ -134,12 +109,12 @@ export function CategoryManagement({ onCategoriesChange }: { onCategoriesChange?
     if (!window.confirm(`Tem certeza que deseja remover a categoria "${label}"?`)) return;
 
     try {
-      await supabase.from("categories").delete().eq("id", id);
-      setCategories((prev) => {
-        const updated = prev.filter((item) => item.id !== id);
+      const updated = categories.filter((item) => item.id !== id);
+      setCategories(updated);
+      saveStoredCategories(updated);
+      if (typeof window !== "undefined") {
         localStorage.setItem("sunshine_categories", JSON.stringify(updated));
-        return updated;
-      });
+      }
       toast.success(`Categoria "${label}" excluída com sucesso.`);
       onCategoriesChange?.();
     } catch {

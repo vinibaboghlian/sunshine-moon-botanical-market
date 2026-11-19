@@ -2,7 +2,7 @@
 
 > Plataforma de e-commerce sensorial e ecossistema operacional para cosmética botânica, rituais de bem-estar e aromaterapia artesanal.
 
-🔗 **Aplicação Publicada:** [https://sunshine-moon-botanical-market.lovable.app](https://sunshine-moon-botanical-market.lovable.app)  
+🔗 **Aplicação Publicada:** [https://sunshine-moon.netlify.app/](https://sunshine-moon.netlify.app/)  
 📦 **Repositório Oficial:** [https://github.com/vinibaboghlian/sunshine-moon-botanical-market](https://github.com/vinibaboghlian/sunshine-moon-botanical-market)
 
 ---

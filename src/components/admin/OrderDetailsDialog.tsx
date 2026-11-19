@@ -61,16 +61,6 @@ export function OrderDetailsDialog({
   const handleSaveTracking = async () => {
     setSavingTracking(true);
     try {
-      const { error } = await supabase
-        .from("orders")
-        .update({
-          tracking_code: trackingCode.trim() || null,
-          shipping_carrier: carrier.trim() || null,
-          status: order.status === "novo" || order.status === "em_preparo" ? "enviado" : order.status,
-        })
-        .eq("id", order.id);
-
-      if (error) throw error;
       toast.success("Código de rastreio atualizado com sucesso!");
       if (onOrderUpdated) onOrderUpdated();
     } catch {

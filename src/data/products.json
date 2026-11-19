@@ -1,0 +1,149 @@
+[
+  {
+    "id": "37432123-165b-4366-8f35-3d9422a25db4",
+    "slug": "escalda-lavanda",
+    "name": "Escalda-Pés Despertar Energético — Lavanda",
+    "category": "escalda_pes",
+    "price": 20.00,
+    "description": "Blend de sais e flores de lavanda para aliviar o cansaço do dia.",
+    "sensory_notes": "Lavanda, sálvia, flores secas",
+    "benefits": [
+      "Alivia pés cansados",
+      "Relaxamento profundo",
+      "Melhora a qualidade do sono"
+    ],
+    "image_url": null,
+    "stock_quantity": 25,
+    "is_active": true,
+    "weight_grams": 250,
+    "package_width_cm": 10,
+    "package_height_cm": 10,
+    "package_depth_cm": 6
+  },
+  {
+    "id": "2371a51b-0fdd-476a-9961-1e56f8740a7b",
+    "slug": "escalda-cafe",
+    "name": "Escalda-Pés Despertar Energético — Café",
+    "category": "escalda_pes",
+    "price": 20.00,
+    "description": "Sais com café moído para revigorar e ativar a circulação.",
+    "sensory_notes": "Café torrado, canela, cacau",
+    "benefits": [
+      "Ativa a circulação",
+      "Revigora o corpo",
+      "Esfoliação natural"
+    ],
+    "image_url": null,
+    "stock_quantity": 25,
+    "is_active": true,
+    "weight_grams": 100,
+    "package_width_cm": 10,
+    "package_height_cm": 10,
+    "package_depth_cm": 6
+  },
+  {
+    "id": "9cec9d37-79d4-4647-bf22-8838e60327a5",
+    "slug": "acalanto-lunar",
+    "name": "Sabonete Acalanto Lunar",
+    "category": "sabonetes",
+    "price": 18.00,
+    "description": "Sabonete artesanal de mel e camomila para rituais noturnos de desaceleração.",
+    "sensory_notes": "Mel dourado, camomila, leve baunilha",
+    "benefits": [
+      "Acalma a pele sensível",
+      "Induz relaxamento antes de dormir",
+      "Hidratação suave"
+    ],
+    "image_url": null,
+    "stock_quantity": 40,
+    "is_active": true,
+    "weight_grams": 100,
+    "package_width_cm": 8,
+    "package_height_cm": 6,
+    "package_depth_cm": 3
+  },
+  {
+    "id": "ff2a5030-a680-4ad2-a074-d817e2108365",
+    "slug": "fartura-realizacao",
+    "name": "Sabonete Fartura e Realização",
+    "category": "sabonetes",
+    "price": 18.00,
+    "description": "Amora e romã para despertar abundância e vitalidade.",
+    "sensory_notes": "Amora silvestre, romã, frutas vermelhas",
+    "benefits": [
+      "Rico em antioxidantes",
+      "Perfume frutado duradouro",
+      "Pele macia e luminosa"
+    ],
+    "image_url": null,
+    "stock_quantity": 40,
+    "is_active": true,
+    "weight_grams": 100,
+    "package_width_cm": 8,
+    "package_height_cm": 6,
+    "package_depth_cm": 3
+  },
+  {
+    "id": "8f2f85c8-fec2-483d-9024-e5a5e4b4642e",
+    "slug": "purificacao-eterica",
+    "name": "Sabonete Purificação Etérica",
+    "category": "sabonetes",
+    "price": 18.00,
+    "description": "Sal grosso e notas botânicas frescas para limpeza energética e renovação.",
+    "sensory_notes": "Sal marinho, notas amadeiradas, cítrico fresco",
+    "benefits": [
+      "Limpeza energética",
+      "Esfoliação delicada",
+      "Sensação de renovação"
+    ],
+    "image_url": null,
+    "stock_quantity": 35,
+    "is_active": true,
+    "weight_grams": 100,
+    "package_width_cm": 8,
+    "package_height_cm": 6,
+    "package_depth_cm": 3
+  },
+  {
+    "id": "8eccef5c-fdd7-490c-a374-287a31025173",
+    "slug": "brisa-lunar",
+    "name": "Água de Lençol Brisa Lunar",
+    "category": "home_spray",
+    "price": 15.00,
+    "description": "Bruma botânica para lençóis e travesseiros, criando um refúgio de calma.",
+    "sensory_notes": "Lavanda, algodão limpo, flor de laranjeira",
+    "benefits": [
+      "Perfuma tecidos",
+      "Ambiente acolhedor",
+      "Ritual de sono tranquilo"
+    ],
+    "image_url": null,
+    "stock_quantity": 30,
+    "is_active": true,
+    "weight_grams": 50,
+    "package_width_cm": 18,
+    "package_height_cm": 5,
+    "package_depth_cm": 5
+  },
+  {
+    "id": "445bfd99-82a2-46de-a967-55790deba71d",
+    "slug": "difusor-de-ambientes",
+    "name": "Difusor de Ambientes",
+    "category": "home_spray",
+    "price": 120.00,
+    "description": "Difusor com varetas em fragrância botânica premium para ambientes elegantes e acolhedores.",
+    "sensory_notes": "Família Olfativa: Cítrica Aromática, Chá Branco",
+    "benefits": [
+      "Aromatização contínua e suave",
+      "Decora e acolhe o espaço",
+      "Varetas condutoras de alto desempenho"
+    ],
+    "image_url": null,
+    "stock_quantity": 20,
+    "is_active": true,
+    "weight_grams": 250,
+    "package_width_cm": 10,
+    "package_height_cm": 18,
+    "package_depth_cm": 6
+  }
+]

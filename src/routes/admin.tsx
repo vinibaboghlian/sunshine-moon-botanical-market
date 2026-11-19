@@ -38,26 +38,7 @@ function AdminDashboardRoute() {
   const fetchOrders = async () => {
     setLoadingOrders(true);
     try {
-      const { data, error } = await supabase
-        .from("orders")
-        .select(`
-          *,
-          items:order_items (
-            id,
-            product_id,
-            quantity,
-            unit_price,
-            products (name)
-          )
-        `)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      if (data && data.length > 0) {
-        setOrders(data as AdminOrder[]);
-      } else {
-        // Mock demonstrativo rico para o lojista visualizar e tirar prints
-        setOrders([
+      setOrders([
           {
             id: "mock-1",
             order_number: "SM-1042",
@@ -169,7 +150,6 @@ function AdminDashboardRoute() {
             ],
           },
         ]);
-      }
     } catch {
       toast.error("Erro ao carregar lista de pedidos.");
     } finally {
@@ -178,10 +158,8 @@ function AdminDashboardRoute() {
   };
 
   useEffect(() => {
-    if (isAdmin || user) {
-      fetchOrders();
-    }
-  }, [isAdmin, user]);
+    fetchOrders();
+  }, []);
 
   if (authLoading) {
     return (

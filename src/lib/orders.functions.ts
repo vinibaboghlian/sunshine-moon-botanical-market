@@ -74,7 +74,16 @@ export const createOrder = createServerFn({ method: "POST" })
     const key = process.env['STRIPE_SECRET_KEY'];
     if (key) {
       const body = new URLSearchParams();
+      body.set("ui_mode", "hosted_page");
       body.set("mode", "payment");
+      body.set("billing_address_collection", "auto");
+      body.set("phone_number_collection[enabled]", "false");
+      body.set("automatic_tax[enabled]", "false");
+      body.set("allow_promotion_codes", "true");
+      body.set("submit_type", "auto");
+      body.set("saved_payment_method_options[payment_method_save]", "enabled");
+      body.set("integration_identifier", "hosted_web_0001");
+      body.set("origin_context", "web");
       body.set("customer_email", data.customer_email);
       body.set("client_reference_id", order_number);
       body.set("metadata[order_id]", order.id);

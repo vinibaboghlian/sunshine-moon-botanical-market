@@ -39,3 +39,8 @@ dist-ssr
 dist/
 .netlify/
 
+
+chaves produção stripe.txt
+STRIPE_INTEGRATION_TODO.md
+*.zip
+
