@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Minus, Moon, Plus, Search, ShoppingBag, Trash2, User, ShieldCheck } from "lucide-react";
+import { Minus, Moon, Plus, Search, ShoppingBag, Trash2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -89,19 +89,7 @@ function Index() {
             <Input className="pl-9" placeholder="Buscar aromas…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           <div className="flex items-center gap-2">
-            {/* Ícone Minha Conta */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate({ to: user ? "/minha-conta" : "/login" })}
-              title={user ? "Minha Conta" : "Entrar / Cadastrar"}
-              aria-label="Minha Conta"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <User className="h-4 w-4" />
-            </Button>
-
-            {/* Ícone Painel Lojista Admin (Visível se Admin ou para acesso do lojista) */}
+            {/* Ícone Painel Lojista Admin */}
             <Button
               variant={isAdmin ? "secondary" : "outline"}
               size="icon"
