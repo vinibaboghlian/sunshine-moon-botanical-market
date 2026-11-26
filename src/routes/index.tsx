@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { CATEGORIES, getStoredCategories, productsQuery, type Product } from "@/lib/products";
+import { CATEGORIES, fetchCatalogCategories, getStoredCategories, productsQuery, type Product } from "@/lib/products";
 import { useCart } from "@/lib/cart";
 import { formatBRL } from "@/lib/checkout-rules";
 import { CheckoutDialog } from "@/components/store/CheckoutDialog";
@@ -44,8 +44,10 @@ function Index() {
   });
 
   useEffect(() => {
-    const cats = getStoredCategories().filter((c: { id: string }) => c.id !== "todos");
-    setCategoriesList([{ id: "todos", label: "Todos" }, ...cats]);
+    fetchCatalogCategories().then((allCats) => {
+      const cats = allCats.filter((c) => c.id !== "todos");
+      setCategoriesList([{ id: "todos", label: "Todos" }, ...cats]);
+    });
   }, []);
 
   useEffect(() => {

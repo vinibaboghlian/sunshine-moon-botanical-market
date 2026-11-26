@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env["VITE_FIREBASE_API_KEY"] || "AIzaSyBawcZprUN4UUtii7Uy28aSwKeojZmPY9Q",
@@ -12,5 +13,6 @@ const firebaseConfig = {
 
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Avoid initializing browser Auth persistence during SSR prerendering
+// Avoid initializing browser Auth/Firestore during SSR prerendering
 export const auth: Auth | null = typeof window !== "undefined" ? getAuth(app) : null;
+export const db: Firestore | null = typeof window !== "undefined" ? getFirestore(app) : null;

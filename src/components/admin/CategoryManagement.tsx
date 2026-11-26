@@ -11,7 +11,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { getStoredCategories, saveStoredCategories } from "@/lib/products";
+import {
+  fetchCatalogCategories,
+  getStoredCategories,
+  saveCatalogCategories,
+} from "@/lib/products";
 
 export type CategoryItem = {
   id: string;
@@ -28,13 +32,14 @@ export function CategoryManagement({ onCategoriesChange }: { onCategoriesChange?
   const [catName, setCatName] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const loadCategories = () => {
+  const loadCategories = async () => {
     setLoading(true);
     try {
-      const cats = getStoredCategories().filter((c: { id: string }) => c.id !== "todos");
+      const cats = (await fetchCatalogCategories()).filter((c) => c.id !== "todos");
       setCategories(cats);
     } catch {
-      // fallback
+      const cats = getStoredCategories().filter((c) => c.id !== "todos");
+      setCategories(cats);
     } finally {
       setLoading(false);
     }
@@ -84,7 +89,7 @@ export function CategoryManagement({ onCategoriesChange }: { onCategoriesChange?
         : [...categories, newCategory];
 
       setCategories(updated);
-      saveStoredCategories(updated);
+      await saveCatalogCategories(updated);
       // Manter retrocompatibilidade com sunshine_categories se necessário
       if (typeof window !== "undefined") {
         localStorage.setItem("sunshine_categories", JSON.stringify(updated));
@@ -111,7 +116,7 @@ export function CategoryManagement({ onCategoriesChange }: { onCategoriesChange?
     try {
       const updated = categories.filter((item) => item.id !== id);
       setCategories(updated);
-      saveStoredCategories(updated);
+      await saveCatalogCategories(updated);
       if (typeof window !== "undefined") {
         localStorage.setItem("sunshine_categories", JSON.stringify(updated));
       }

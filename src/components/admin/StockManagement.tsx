@@ -15,7 +15,15 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getStoredProducts, saveStoredProducts, getStoredCategories, type Product } from "@/lib/products";
+import {
+  compressImageFile,
+  deleteCatalogProduct,
+  fetchCatalogCategories,
+  fetchCatalogProducts,
+  saveStoredProducts,
+  upsertCatalogProduct,
+  type Product,
+} from "@/lib/products";
 
 export type ProductRow = {
   id: string;
@@ -40,9 +48,9 @@ export function StockManagement() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [categoriesList, setCategoriesList] = useState<{ id: string; label: string }[]>([]);
 
-  const loadCategories = () => {
+  const loadCategories = async () => {
     try {
-      const cats = getStoredCategories().filter((c: { id: string }) => c.id !== "todos");
+      const cats = (await fetchCatalogCategories()).filter((c) => c.id !== "todos");
       setCategoriesList(cats);
     } catch {}
   };
@@ -70,10 +78,10 @@ export function StockManagement() {
     package_depth_cm: "5",
   });
 
-  const loadProducts = () => {
+  const loadProducts = async () => {
     setLoading(true);
     try {
-      const stored = getStoredProducts();
+      const stored = await fetchCatalogProducts();
       const formatted: ProductRow[] = stored.map((p) => {
         const isLiquid =
           p.category === "home_spray" ||
@@ -128,18 +136,16 @@ export function StockManagement() {
       const numericPrice = Number(product.price);
       const numericStock = Number(product.stock_quantity);
 
-      const updated = products.map((p) =>
-        p.id === product.id
-          ? {
-              ...p,
-              price: numericPrice,
-              stock_quantity: numericStock,
-              is_active: product.is_active,
-            }
-          : p
-      );
+      const savedProduct: ProductRow = {
+        ...product,
+        price: numericPrice,
+        stock_quantity: numericStock,
+        is_active: product.is_active,
+      };
+      const updated = products.map((p) => (p.id === product.id ? savedProduct : p));
       setProducts(updated);
-      saveStoredProducts(updated as any);
+      saveStoredProducts(updated as Product[]);
+      await upsertCatalogProduct(savedProduct as Product, updated as Product[]);
 
       toast.success(`"${product.name}" atualizado para ${formatBRL(numericPrice)}!`);
     } catch {
@@ -149,19 +155,19 @@ export function StockManagement() {
     }
   };
 
-  // Upload de Imagem local (converte em base64)
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload de Imagem local (redimensiona e comprime para caber no Firestore sem precisar de Storage)
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error("A imagem deve ter no máximo 2MB.");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((p) => ({ ...p, image_url: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 10MB.");
+      return;
+    }
+    try {
+      const compressed = await compressImageFile(file);
+      setFormData((p) => ({ ...p, image_url: compressed }));
+    } catch {
+      toast.error("Não foi possível processar a imagem selecionada.");
     }
   };
 
@@ -262,11 +268,14 @@ export function StockManagement() {
       };
 
       if (editingId) {
+        const existing = products.find((item) => item.id === editingId);
+        const savedItem = { ...existing, ...payload, id: editingId, unit: formData.unit };
         const updated = products.map((item) =>
-          item.id === editingId ? { ...item, ...payload, unit: formData.unit } : item
+          item.id === editingId ? (savedItem as ProductRow) : item
         );
         setProducts(updated);
-        saveStoredProducts(updated as any);
+        saveStoredProducts(updated as Product[]);
+        await upsertCatalogProduct(savedItem as Product, updated as Product[]);
         toast.success(`Produto "${formData.name}" atualizado com sucesso!`);
       } else {
         const slug = formData.name
@@ -285,7 +294,8 @@ export function StockManagement() {
 
         const updated = [newRecord, ...products];
         setProducts(updated);
-        saveStoredProducts(updated as any);
+        saveStoredProducts(updated as Product[]);
+        await upsertCatalogProduct(newRecord as Product, updated as Product[]);
         toast.success(`Novo produto "${formData.name}" cadastrado na loja!`);
       }
 
@@ -304,7 +314,8 @@ export function StockManagement() {
     try {
       const updated = products.filter((p) => p.id !== id);
       setProducts(updated);
-      saveStoredProducts(updated as any);
+      saveStoredProducts(updated as Product[]);
+      await deleteCatalogProduct(id);
       toast.success(`"${name}" removido com sucesso.`);
     } catch {
       toast.error("Não foi possível excluir o produto.");
