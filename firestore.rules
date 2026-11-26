@@ -16,10 +16,11 @@ rules_version = '2';
 //   - description: string | null (optional, <= 5000 chars) - Product description
 //   - sensory_notes: string | null (optional, <= 1000 chars) - Sensory notes
 //   - benefits: list (optional, <= 30 items) - List of benefit strings
-//   - image: string | null (optional, <= 2000 chars) - Primary image path/URL
-//   - image_url: string | null (optional, <= 2000 chars) - Uploaded image URL
+//   - image: string | null (optional, <= 900000 chars) - Primary image path/URL or base64 data URL
+//   - image_url: string | null (optional, <= 900000 chars) - Uploaded image URL or base64 data URL
 //   - stock_quantity: number (optional, >= 0) - Available stock count
 //   - weight_grams: number (optional, >= 0) - Product weight in grams
+//   - unit: string (optional, 'g' | 'ml') - Weight/volume unit
 //   - package_width_cm: number (optional, >= 0) - Package width in cm
 //   - package_height_cm: number (optional, >= 0) - Package height in cm
 //   - package_depth_cm: number (optional, >= 0) - Package depth in cm
@@ -46,23 +47,6 @@ service cloud.firestore {
     // Check if the user is authenticated (admin-only in this app, sign-up disabled)
     function isAuthenticated() {
       return request.auth != null;
-    }
-
-    // Check if user owns the resource
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Verify UID hasn't been tampered with on create
-    function uidUnchanged() {
-      return !('uid' in request.resource.data) ||
-        request.resource.data.uid == request.auth.uid;
-    }
-
-    // Ensure uid field is not modified on update
-    function uidNotModified() {
-      return !('uid' in request.resource.data) ||
-        request.resource.data.uid == resource.data.uid;
     }
 
     // Validate required fields exist
@@ -130,7 +114,7 @@ service cloud.firestore {
       let allowedFields = [
         'name', 'price', 'category', 'is_active',
         'id', 'slug', 'description', 'sensory_notes', 'benefits',
-        'image', 'image_url', 'stock_quantity', 'weight_grams',
+        'image', 'image_url', 'stock_quantity', 'weight_grams', 'unit',
         'package_width_cm', 'package_height_cm', 'package_depth_cm',
         'createdAt', 'updatedAt'
       ];
@@ -145,10 +129,11 @@ service cloud.firestore {
         isValidOptionalStringOrNull('description', 5000) &&
         isValidOptionalStringOrNull('sensory_notes', 1000) &&
         isValidOptionalList('benefits', 30) &&
-        isValidOptionalStringOrNull('image', 2000) &&
-        isValidOptionalStringOrNull('image_url', 2000) &&
+        isValidOptionalStringOrNull('image', 900000) &&
+        isValidOptionalStringOrNull('image_url', 900000) &&
         isValidOptionalNonNegativeNumber('stock_quantity') &&
         isValidOptionalNonNegativeNumber('weight_grams') &&
+        (!('unit' in request.resource.data) || request.resource.data.unit in ['g', 'ml']) &&
         isValidOptionalNonNegativeNumber('package_width_cm') &&
         isValidOptionalNonNegativeNumber('package_height_cm') &&
         isValidOptionalNonNegativeNumber('package_depth_cm') &&

@@ -300,8 +300,14 @@ export function StockManagement() {
       }
 
       setOpenModal(false);
-    } catch {
-      toast.error("Erro inesperado ao salvar produto.");
+    } catch (err) {
+      console.error("Erro ao salvar produto:", err);
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("permission-denied") || msg.includes("Missing or insufficient permissions")) {
+        toast.error("Sem permissão no Firestore. Faça login novamente em /login.");
+      } else {
+        toast.error("Erro ao salvar produto no Firestore.");
+      }
     } finally {
       setSavingProduct(false);
     }
